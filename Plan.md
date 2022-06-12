@@ -1,4 +1,4 @@
-1. Proć kroz sve materijale sa GASERI
+1. Proć kroz sve materijale sa GASERI (Korak 1. i 2. možemo preskočit i gledat samo u Materijali.md)
 2. Otkrit šta je Fernet
 2. Poslat mail ako moramo nadogradit na seminar iz OS jer nam pola toga nije radilo
 3. Ako do sad nismo onda otkrit šta je konfiguracijska datoteka koja mora bit u projektu
