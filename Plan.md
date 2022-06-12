@@ -27,4 +27,4 @@ https://cryptography.io/en/latest/fernet/
 ## Poly1305
 https://cryptography.io/en/latest/hazmat/primitives/mac/poly1305/
 
-Ako budemo imali vremena ja bi možda napravila neko grafičko sučelje za aplikaciju ali ne znam ako to treba ili pišemo u terminalu sve poruke
+Ako budemo imali vremena ja bi možda napravila neko grafičko sučelje za aplikaciju ali ne znam ako to treba ili pišemo u terminalu sve poruke.
