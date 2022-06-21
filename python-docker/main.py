@@ -1,5 +1,4 @@
-import konfiguracijska_datoteka
-
+from ..Projekt import konfiguracijska_datoteka 
 kljucic = konfiguracijska_datoteka.FernetGenerateKey() # posalji klijentu
 with open('kljucic.txt', 'w') as f:
         f.write(str(kljucic))
