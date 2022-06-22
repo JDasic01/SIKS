@@ -16,3 +16,5 @@ if (konfiguracijska_datoteka.ChaChaPoly(encrypted_message)):
     konfiguracijska_datoteka.FernetDecrypt(kljucic, encrypted_message)
 else:
     print("dobili ste poruku koja nije valjana")
+
+
