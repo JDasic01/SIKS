@@ -1,20 +1,42 @@
 import konfiguracijska_datoteka
+import socket 
+import threading
 
-kljucic = konfiguracijska_datoteka.FernetGenerateKey() # posalji klijentu
-with open('kljucic.txt', 'w') as f:
-        f.write(str(kljucic))
+HEADER =  b' ' *2048
+PORT = 5050
+SERVER = socket.gethostbyname(socket.gethostname())
+ADDR = (SERVER, PORT)
+FORMAT = 'utf-8'
+DISCONNECT_MESSAGE = "!DISCONNECT"
 
-f = open("kljucic.txt", "r")
-fernet_key_string = f.read()
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(ADDR)
 
-konfiguracijska_datoteka.SecondHandshakeSharedKey()
-konfiguracijska_datoteka.SecondHandshakeData(fernet_key_string)
+def handle_client(conn, addr):
+    print(f"[NEW CONNECTION] {addr} connected.")
+    connected = True
+    while connected:
+        if True:
+            msg = conn.recv(2048).decode(FORMAT)
+            if msg == DISCONNECT_MESSAGE:
+                connected = False
+            print(f"[{addr}] {msg}")
+        send(conn)
+    conn.close()
 
-encrypted_message=konfiguracijska_datoteka.FernetEncrypt(kljucic) # ovo dobivamo od klijenta, kljucicKlijent ide tu
+def send(conn):
+    msg = "Posluzitelj: " + input("Unos poruke: ")
+    conn.send(msg.encode(FORMAT))
 
-if (konfiguracijska_datoteka.ChaChaPoly(encrypted_message)):
-    konfiguracijska_datoteka.FernetDecrypt(kljucic, encrypted_message)
-else:
-    print("dobili ste poruku koja nije valjana")
+def start():
+    server.listen()
+    print(f"[LISTENING] Server is listening on {SERVER}")
+    while True:
+        conn, addr = server.accept()
+        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        thread.start()
+        print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
 
 
+print("[STARTING] server is starting...")
+start()
