@@ -1,42 +1,30 @@
+from socket import *
+from threading import *
 import konfiguracijska_datoteka
-import socket 
-import threading
 
-HEADER =  b' ' *2048
-PORT = 5050
-SERVER = socket.gethostbyname(socket.gethostname())
-ADDR = (SERVER, PORT)
-FORMAT = 'utf-8'
-DISCONNECT_MESSAGE = "!DISCONNECT"
+AUTH_MESSAGE = "Autentikacija preko RSA kljuceva...".encode()
+class ChatThread(Thread):
+    def __init__(self,con):
+        Thread.__init__(self)
+        self.con=con
+    def run(self):
+        name=current_thread().getName()
+        while True:
+            if name=='Sender':
+                data=input('Server:')
+                self.con.send(bytes(data, 'utf-8'))
+            elif name=='Receiver':
+                recData=self.con.recv(1024).decode()
+                print('Client: ',recData)
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(ADDR)
-
-def handle_client(conn, addr):
-    print(f"[NEW CONNECTION] {addr} connected.")
-    connected = True
-    while connected:
-        if True:
-            msg = conn.recv(2048).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
-            print(f"[{addr}] {msg}")
-        send(conn)
-    conn.close()
-
-def send(conn):
-    msg = "Posluzitelj: " + input("Unos poruke: ")
-    conn.send(msg.encode(FORMAT))
-
-def start():
-    server.listen()
-    print(f"[LISTENING] Server is listening on {SERVER}")
-    while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
-        thread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
-
-
-print("[STARTING] server is starting...")
-start()
+server = socket(AF_INET, SOCK_STREAM)
+server.bind(('127.0.0.1', 1234))
+server.listen(2)
+conn, addr = server.accept()
+sender = ChatThread(conn)
+sender.setName('Sender')
+receiver=ChatThread(conn)
+receiver.setName('Receiver')
+konfiguracijska_datoteka.AutentifikacijaRSA()
+sender.start()
+receiver.start()
