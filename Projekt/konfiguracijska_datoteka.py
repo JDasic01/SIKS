@@ -20,7 +20,7 @@ def GenerirajRSAkljuceve():
         key_size=2048,
     )
 
-    private_key_pem = private_key.private_bytes(                                #print("Ključ je", private_key_pem)
+    private_key_pem = private_key.private_bytes(                                
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.BestAvailableEncryption(b'1234')
@@ -46,7 +46,6 @@ def AutentikacijaRSA(private_key, public_key):
         hashes.SHA256()
     )
 
-    # print("Potpis: ", signature)
     verification = public_key.verify(
         signature,
         message,
@@ -56,25 +55,25 @@ def AutentikacijaRSA(private_key, public_key):
         ),
         hashes.SHA256()
     )
-    short_message = b"0123556789"
-    ciphertext = public_key.encrypt(
-        short_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
 
-    print("Šifrirana poruka je", ciphertext)
-    plaintext = private_key.decrypt(
-        ciphertext,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
+    if(verification):
+        short_message = b"0123556789"
+        ciphertext = public_key.encrypt(
+            short_message,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-    )
+        plaintext = private_key.decrypt(
+            ciphertext,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
 
     if(plaintext == short_message):
         authorized = True
