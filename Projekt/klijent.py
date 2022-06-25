@@ -1,78 +1,50 @@
-import socket
-import threading
+from socket import *
+from threading import *
+import konfiguracijska_datoteka
 
-HEADER =  b' ' *2048
-PORT = 5050
-FORMAT = 'utf-8'
-DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = socket.gethostbyname(socket.gethostname())
-ADDR = (SERVER, PORT)
+class ChatThread(Thread):
+    def __init__(self,con):
+        Thread.__init__(self)
+        self.con=con
+    def run(self):
+        name=current_thread().getName()
+        while True:
+            if name=='Sender':
+                data = konfiguracijska_datoteka.FernetEncrypt(fernet_key_server) # Fernet enkripcija
+                nonce, ct, aad, key = konfiguracijska_datoteka.ChaChaPoly(data)
+                self.con.send(data)
+            elif name=='Receiver':
+                if(konfiguracijska_datoteka.ChaChaPolyDecrypt(nonce, ct, aad, key)):
+                    recData=self.con.recv(1024).decode()
+                    konfiguracijska_datoteka.FernetDecrypt(fernet_key_server, recData) # Fernet dekripcija
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(ADDR)
+client = socket()
+client.connect(('127.0.0.1', 4321))
+sender = ChatThread(client)
+sender.setName('Sender')
+receiver=ChatThread(client)
+receiver.setName('Receiver')
 
-def send():
-    msg = "Klijent: " + input("Unos poruke: ")
-    if msg== DISCONNECT_MESSAGE:
-        send(DISCONNECT_MESSAGE)
-    message = msg.encode(FORMAT)
-    client.send(HEADER)
-    client.send(message)
-    
+# Autentikacija RSA
+private_key_client, public_key_client, private_key_pem_client, public_key_pem_client = konfiguracijska_datoteka.GenerirajRSAkljuceve()
+auth = konfiguracijska_datoteka.AutentikacijaRSA(private_key_client, public_key_client)
 
-def recieve():
-    print(client.recv(2048).decode(FORMAT))
+client.send(str(private_key_client).encode())
+client.send(str(public_key_client).encode())
 
-while True:
-    send()
-    recieve()
+# Razmjena ključeva X25519
+# First handshake
+shared_key_client = konfiguracijska_datoteka.FirstHandshakeSharedKey()
+fernet_key_client = konfiguracijska_datoteka.FernetGenerateKey()
+derived_key_client = konfiguracijska_datoteka.FirstHandshakeData(fernet_key_client, shared_key_client)
+# Second handshake
+shared_key2_client = konfiguracijska_datoteka.SecondHandshakeSharedKey()
+derived_key2_client = konfiguracijska_datoteka.SecondHandshakeData(fernet_key_client, shared_key2_client)
 
+key_exchange = True
 
-# from operator import imod
-# import konfiguracijska_datoteka
+fernet_key_server = "kljucic"
 
-# import socket
-
-# HEADER = 64
-# PORT = 5050
-# SERVER = socket.gethostbyname(socket.gethostname())
-# ADDR = (SERVER, PORT)
-# FORMAT = 'utf-8'
-# DISCONNECT_MESSAGE = "disconnected"
-
-# client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# client.connect(ADDR)
-
-# def send(msg):
-#     message = msg.encode(FORMAT)
-#     msg_length = len(message)
-#     send_length = str(msg_length).encode(FORMAT)
-#     send_length += b' '*(HEADER-len(send_length))
-#     client.send(send_length)
-#     client.send(message)
-#     print(client.recv(2048).decode(FORMAT))
-
-# # posalji kljuc
-# kljucKlijent = konfiguracijska_datoteka.FernetGenerateKey() # posalji posluzitelju 
-# client.send(kljucKlijent)
-# # primi kljuc
-# print(client.recv(2048).decode(FORMAT))
-# while True:
-#     poruka = input("")
-#     send(poruka)
-
-
-
-# f = open("kljucic.txt", "r")
-# fernet_key_string = f.read()
-
-# konfiguracijska_datoteka.FirstHandshakeSharedKey()
-# konfiguracijska_datoteka.FirstHandshakeData(fernet_key_string)
-
-# encrypted_message=konfiguracijska_datoteka.FernetEncrypt(kljucic) # ovo dobivamo of posluzitelja, kljucicPosluzitelj ide tu
-
-# if (konfiguracijska_datoteka.ChaChaPoly(encrypted_message)):
-#     konfiguracijska_datoteka.FernetDecrypt(kljucic, encrypted_message)
-# else:
-#     print("dobili ste poruku koja nije valjana")
-
+if(auth and key_exchange):
+    sender.start()
+    receiver.start()

@@ -34,8 +34,8 @@ def GenerirajRSAkljuceve():
     )
     return private_key, public_key, private_key_pem, public_key_pem
 
-def AutentifikacijaRSA(private_key, public_key, private_key_pem, public_key_pem):
-    # print("Ključ je", public_key_pem)
+def AutentikacijaRSA(private_key, public_key):
+    authorized=False
     message = "Autentikacija preko RSA kljuceva...".encode()
     signature = private_key.sign(
         message,
@@ -76,23 +76,18 @@ def AutentifikacijaRSA(private_key, public_key, private_key_pem, public_key_pem)
         )
     )
 
-    print("Dešifrirana poruka je", plaintext)
-    print("Poruka je jednaka početnoj?", plaintext == short_message)
+    if(plaintext == short_message):
+        authorized = True
+    return authorized
 
 # Razmjene kljuceva X25519
-
-# Generate a private key for use in the exchange.
 def FirstHandshakeSharedKey():
     private_key = X25519PrivateKey.generate()
-    #print(private_key)
     peer_public_key = X25519PrivateKey.generate().public_key()
-    shared_key = private_key.exchange(peer_public_key) # odvojit u posebnu funkciju, shared key imaju i posluzitelj i klijent
-    with open('firstHandshake.txt', 'w') as f:          # umjesto pisanja u datoteku stavit u varijablu i poslat iz klijenta u posluzitelj i obrnuto
-        f.write(str(shared_key))
+    shared_key = private_key.exchange(peer_public_key) 
+    return shared_key
 
-def FirstHandshakeData(fernet_key):
-    f = open("firstHandshake.txt", "r")
-    shared_key = bytes(f.read(), 'utf-8')
+def FirstHandshakeData(fernet_key, shared_key):
     key = bytes(fernet_key, 'utf-8')
     derived_key = HKDF(
         algorithm=hashes.SHA256(),
@@ -100,19 +95,15 @@ def FirstHandshakeData(fernet_key):
         salt=None,
         info=key, # umjesto handshake data stavit fernet kljuc
     ).derive(shared_key)
-    with open('firstHandshakeDerivedKey.txt', 'w') as f: # umjesto pisanja u datoteku stavit u varijablu i poslat iz klijenta u posluzitelj i obrnuto
-        f.write(str(derived_key))
+    return derived_key
 
 def SecondHandshakeSharedKey():
     private_key_2 = X25519PrivateKey.generate()
     peer_public_key_2 = X25519PrivateKey.generate().public_key()
     shared_key_2 = private_key_2.exchange(peer_public_key_2)
-    with open('secondHandshake.txt', 'w') as f:         # umjesto pisanja u datoteku stavit u varijablu i poslat iz klijenta u posluzitelj i obrnuto
-        f.write(str(shared_key_2))
+    return shared_key_2
 
-def SecondHandshakeData(fernet_key):
-    f = open("firstHandshake.txt", "r")
-    shared_key_2 = bytes(f.read(), 'utf-8')
+def SecondHandshakeData(fernet_key, shared_key_2):
     key = bytes(fernet_key, 'utf-8')
     derived_key_2 = HKDF(
         algorithm=hashes.SHA256(),
@@ -120,8 +111,7 @@ def SecondHandshakeData(fernet_key):
         salt=None,
         info=key,
     ).derive(shared_key_2)
-    with open('secondHandshakeDerivedKey.txt', 'w') as f: # umjesto pisanja u datoteku stavit u varijablu i poslat iz klijenta u posluzitelj i obrnuto
-        f.write(str(derived_key_2))
+    return derived_key_2
 
 
 # Autentifikacija poruka ChaChaPoly1305
@@ -134,8 +124,11 @@ def ChaChaPoly(message):
     chacha = ChaCha20Poly1305(key)
     nonce = os.urandom(12)
     ct = chacha.encrypt(nonce, data, aad)
-    chacha.decrypt(nonce, ct, aad)
-    return True
+    return nonce, ct, aad, key
+
+def ChaChaPolyDecrypt(nonce, ct, aad, key):
+    chacha = ChaCha20Poly1305(key)
+    return chacha.decrypt(nonce, ct, aad)
 
 # Sifriranje poruka
 # FERNET
@@ -156,23 +149,24 @@ def FernetEncrypt(f):
 
 def FernetDecrypt(f, encrypted_message):
     decrypted_message = f.decrypt(encrypted_message)
-    print("Dešifrirana poruka je", decrypted_message) # Desifrirana poruka mora imati ispis, return nebitan jer se samo treba ispisat?
+    print(decrypted_message) 
 
 if __name__ == "__main__":
 
     fernet_key = FernetGenerateKey()
     fernet_key_string = str(fernet_key)
-    FirstHandshakeSharedKey()
-    FirstHandshakeData(fernet_key_string)
-    SecondHandshakeSharedKey()
-    SecondHandshakeData(fernet_key_string)
+    shared_key = FirstHandshakeSharedKey()
+    FirstHandshakeData(fernet_key_string, shared_key)
+    shared_key_2 = SecondHandshakeSharedKey()
+    SecondHandshakeData(fernet_key_string, shared_key_2)
     # fernet proslijeden, razmjena kljuceva gotova
 
     #ovo isto ide u while petlju
     encrypted_message=FernetEncrypt(fernet_key)
 
     # spajanje poly, ovo ce bit while petlja dok klijent/posluzitelj ne prekine slanje poruka
-    if (ChaChaPoly(encrypted_message)):
+    nonce, ct, aad, key = ChaChaPoly(encrypted_message)
+    if (ChaChaPolyDecrypt(nonce, ct, aad, key)):
         FernetDecrypt(fernet_key, encrypted_message)
     else:
         print("dobili ste poruku koja nije valjana")
