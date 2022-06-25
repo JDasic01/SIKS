@@ -17,20 +17,24 @@ class ChatThread(Thread):
                 self.con.send(bytes(data, 'utf-8'))
             elif name=='Receiver':
                 recData=self.con.recv(1024).decode()
-                print('Client: ',recData)
+                print('Klijent: ',recData)
 
 server = socket(AF_INET, SOCK_STREAM)
-server.bind(('127.0.0.1', 4321))
+server.bind(('127.0.0.1', 1234))
 server.listen(2)
 conn, addr = server.accept()
+
 sender = ChatThread(conn)
 sender.setName('Sender')
 receiver=ChatThread(conn)
 receiver.setName('Receiver')
 
-msg_length = conn.recv(HEADER).decode(FORMAT)
-server.recv(conn.recv(private_key_client).decode(FORMAT))
+# msg_length = conn.recv(HEADER).decode(FORMAT)  
+# server.recv(conn.recv(private_key_client).decode(FORMAT))
 
-konfiguracijska_datoteka.AutentikacijaRSA()
+# msg_length = conn.recv(HEADER).decode(FORMAT)
+# server.recv(conn.recv(public_key_client).decode(FORMAT))
+
+# konfiguracijska_datoteka.AutentikacijaRSA()
 sender.start()
 receiver.start()
