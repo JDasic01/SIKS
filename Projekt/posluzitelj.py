@@ -3,7 +3,9 @@ from threading import *
 import konfiguracijska_datoteka
 
 AUTH_MESSAGE = "Autentikacija preko RSA kljuceva...".encode()
-HEADER =  b' ' *2048
+HEADER_PORUKA =  b'32862'
+HEADER_AUTH = b'autentifikacija'
+HEADER_KEY_EXCHANGE = b'key-exchange'
 FORMAT = 'utf-8'
 class ChatThread(Thread):
     def __init__(self,con):
@@ -13,11 +15,13 @@ class ChatThread(Thread):
         name=current_thread().getName()
         while True:
             if name=='Sender':
-                data=input('Server:')
-                self.con.send(bytes(data, 'utf-8'))
+                data=bytes(input(), FORMAT)
+                self.con.send(HEADER_PORUKA)
+                self.con.send(data)
             elif name=='Receiver':
-                recData=self.con.recv(1024).decode()
-                print('Klijent: ',recData)
+                msg = self.con.recv(1024).decode()
+                print("Klijent: " + msg)
+
 
 server = socket(AF_INET, SOCK_STREAM)
 server.bind(('127.0.0.1', 1234))
@@ -29,12 +33,5 @@ sender.setName('Sender')
 receiver=ChatThread(conn)
 receiver.setName('Receiver')
 
-# msg_length = conn.recv(HEADER).decode(FORMAT)  
-# server.recv(conn.recv(private_key_client).decode(FORMAT))
-
-# msg_length = conn.recv(HEADER).decode(FORMAT)
-# server.recv(conn.recv(public_key_client).decode(FORMAT))
-
-# konfiguracijska_datoteka.AutentikacijaRSA()
 sender.start()
 receiver.start()

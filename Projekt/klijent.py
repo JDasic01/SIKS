@@ -10,15 +10,21 @@ class ChatThread(Thread):
         name=current_thread().getName()
         while True:
             if name=='Sender':
-                data = bytes(input("Unos: "),'utf-8')
+                data = bytes(input(),'utf-8')
                 #data = konfiguracijska_datoteka.FernetEncrypt(fernet_key_server) # Fernet enkripcija
-                #nonce, ct, aad, key = konfiguracijska_datoteka.ChaChaPoly(data)
                 self.con.send(data)
             elif name=='Receiver':
-                #if(konfiguracijska_datoteka.ChaChaPolyDecrypt(nonce, ct, aad, key)):
-                recData=self.con.recv(1024).decode()
-                print("Posluzitelj" + recData)
-                     #konfiguracijska_datoteka.FernetDecrypt(fernet_key_server, recData) # Fernet dekripcija
+                msg = self.con.recv(1024).decode()
+                print("Posluzitelj: " + msg)
+
+
+def key_exchange(client):
+    fernet_key_client = konfiguracijska_datoteka.FernetGenerateKey()
+    public_key_client, private_key_client = konfiguracijska_datoteka.SendFernetKeyClient(fernet_key_client)
+    client.send(b'Pocetak razmjene kljuceva')
+    client.send(public_key_client)
+    return private_key_client
+
 
 client = socket()
 client.connect(('127.0.0.1', 1234))
@@ -27,26 +33,6 @@ sender.setName('Sender')
 receiver=ChatThread(client)
 receiver.setName('Receiver')
 
-# # Autentikacija RSA
-# private_key_client, public_key_client, private_key_pem_client, public_key_pem_client = konfiguracijska_datoteka.GenerirajRSAkljuceve()
-# auth = konfiguracijska_datoteka.AutentikacijaRSA(private_key_client, public_key_client)
-
-# client.send(str(private_key_client).encode())
-# client.send(str(public_key_client).encode())
-
-# # Razmjena ključeva X25519
-# # First handshake
-# shared_key_client = konfiguracijska_datoteka.FirstHandshakeSharedKey()
-# fernet_key_client = konfiguracijska_datoteka.FernetGenerateKey()
-# derived_key_client = konfiguracijska_datoteka.FirstHandshakeData(fernet_key_client, shared_key_client)
-# # Second handshake
-# shared_key2_client = konfiguracijska_datoteka.SecondHandshakeSharedKey()
-# derived_key2_client = konfiguracijska_datoteka.SecondHandshakeData(fernet_key_client, shared_key2_client)
-
-# key_exchange = True
-
-# fernet_key_server = "kljucic"
-
-# if(auth and key_exchange):
+private_key = key_exchange(client)
 sender.start()
 receiver.start()
