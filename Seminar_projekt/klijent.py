@@ -1,7 +1,6 @@
 from socket import *
 from threading import *
-
-FORMAT = 'utf-8'
+import konfiguracijska_datoteka
 
 class ChatThread(Thread):
     def __init__(self,con):
@@ -11,21 +10,18 @@ class ChatThread(Thread):
         name=current_thread().getName()
         while True:
             if name=='Sender':
-                data=bytes(input(), FORMAT)
+                data = bytes(input(),'utf-8')
+                #data = konfiguracijska_datoteka.FernetEncrypt(fernet_key_server) # Fernet enkripcija
                 self.con.send(data)
             elif name=='Receiver':
                 msg = self.con.recv(1024).decode()
-                print("Klijent: " + msg)
+                print("Posluzitelj: " + msg)
 
-
-server = socket(AF_INET, SOCK_STREAM)
-server.bind(('127.0.0.1', 1234))
-server.listen(2)
-conn, addr = server.accept()
-
-sender = ChatThread(conn)
+client = socket()
+client.connect(('127.0.0.1', 1234))
+sender = ChatThread(client)
 sender.setName('Sender')
-receiver=ChatThread(conn)
+receiver=ChatThread(client)
 receiver.setName('Receiver')
 
 sender.start()
